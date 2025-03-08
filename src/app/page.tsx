@@ -19,7 +19,7 @@ export default function Home() {
       </main>
       
       <footer className="mt-12 text-center text-sm text-gray-500 dark:text-gray-400">
-        <p>Built with React and Next.js</p>
+        <p>Built with Web Audio API and Web Speech API</p>
       </footer>
     </div>
   );

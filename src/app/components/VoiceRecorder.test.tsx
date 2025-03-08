@@ -1,118 +1,108 @@
-import { render, screen, fireEvent, act } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import VoiceRecorder from './VoiceRecorder';
+import useVoiceRecorder from '../hooks/useVoiceRecorder';
 
-// Define types for our mocks
-interface MockMediaRecorder {
-  start: jest.Mock;
-  stop: jest.Mock;
-  pause: jest.Mock;
-  resume: jest.Mock;
-  ondataavailable: jest.Mock;
-  onstop: jest.Mock;
-  state: string;
-}
-
-// Mock the MediaRecorder API
-const mockMediaRecorder = jest.fn().mockImplementation(() => {
-  return {
-    start: jest.fn(),
-    stop: jest.fn(),
-    pause: jest.fn(),
-    resume: jest.fn(),
-    ondataavailable: jest.fn(),
-    onstop: jest.fn(),
-    state: 'inactive',
-  } as MockMediaRecorder;
+// Mock the useVoiceRecorder hook
+jest.mock('../hooks/useVoiceRecorder', () => {
+  return jest.fn(() => ({
+    isRecording: false,
+    isPaused: false,
+    recordingTime: 0,
+    transcript: '',
+    audioURL: null,
+    startRecording: jest.fn(),
+    pauseRecording: jest.fn(),
+    stopRecording: jest.fn()
+  }));
 });
 
-// Add isTypeSupported method to the mock
-// @ts-expect-error - Adding property to mock function
-mockMediaRecorder.isTypeSupported = jest.fn().mockReturnValue(true);
-
-// @ts-expect-error - TypeScript doesn't know about MediaRecorder
-global.MediaRecorder = mockMediaRecorder;
-
-// Mock getUserMedia
-Object.defineProperty(global.navigator, 'mediaDevices', {
-  value: {
-    getUserMedia: jest.fn().mockResolvedValue({
-      getTracks: () => [{ stop: jest.fn() }],
-    }),
-  },
-  writable: true,
-});
-
-// Mock SpeechRecognition
-const mockSpeechRecognition = jest.fn().mockImplementation(() => {
-  return {
-    start: jest.fn(),
-    stop: jest.fn(),
-    abort: jest.fn(),
-    continuous: false,
-    interimResults: false,
-    onresult: jest.fn(),
-  };
-});
-
-// @ts-expect-error - TypeScript doesn't know about SpeechRecognition
-global.SpeechRecognition = mockSpeechRecognition;
-// @ts-expect-error - TypeScript doesn't know about webkitSpeechRecognition
-global.webkitSpeechRecognition = mockSpeechRecognition;
-
-// Helper function to wait for state updates
-const waitForStateUpdate = () => new Promise(resolve => setTimeout(resolve, 0));
+// Get the mocked hook
+const mockedUseVoiceRecorder = useVoiceRecorder as jest.MockedFunction<typeof useVoiceRecorder>;
 
 describe('VoiceRecorder Component', () => {
-  beforeEach(() => {
-    jest.clearAllMocks();
-  });
-
   test('renders the component with initial state', () => {
     render(<VoiceRecorder />);
     
     expect(screen.getByText('Voice Recorder')).toBeInTheDocument();
-    expect(screen.getByText('Record')).toBeInTheDocument();
-    expect(screen.queryByText('Pause')).not.toBeInTheDocument();
-    expect(screen.queryByText('Stop')).not.toBeInTheDocument();
+    expect(screen.getByTestId('record-button')).toBeInTheDocument();
+    expect(screen.queryByTestId('pause-button')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('stop-button')).not.toBeInTheDocument();
   });
 
-  test('shows pause and stop buttons when recording starts', async () => {
-    // We can't mock the component's methods easily since it's a functional component
-    // Instead, we'll just test that getUserMedia is called
+  test('renders pause and stop buttons when recording', () => {
+    // Update the mock to return isRecording as true
+    mockedUseVoiceRecorder.mockReturnValue({
+      isRecording: true,
+      isPaused: false,
+      recordingTime: 10,
+      transcript: '',
+      audioURL: null,
+      startRecording: jest.fn(),
+      pauseRecording: jest.fn(),
+      stopRecording: jest.fn()
+    });
+    
     render(<VoiceRecorder />);
     
-    const recordButton = screen.getByText('Record');
-    
-    await act(async () => {
-      fireEvent.click(recordButton);
-      await waitForStateUpdate();
-    });
-    
-    expect(navigator.mediaDevices.getUserMedia).toHaveBeenCalledWith({ audio: true });
+    expect(screen.queryByTestId('record-button')).not.toBeInTheDocument();
+    expect(screen.getByTestId('pause-button')).toBeInTheDocument();
+    expect(screen.getByTestId('stop-button')).toBeInTheDocument();
+    expect(screen.getByText('00:10')).toBeInTheDocument();
   });
 
-  test('changes button text when pausing', async () => {
-    // This test is skipped because we need to refactor the component to make it more testable
-    // We would need to mock the state changes more effectively
-  });
-
-  test('calls onTranscriptionComplete when stopping recording', async () => {
-    const mockOnTranscriptionComplete = jest.fn();
-    render(<VoiceRecorder onTranscriptionComplete={mockOnTranscriptionComplete} />);
-    
-    // Manually trigger the onstop event
-    const mediaRecorderInstance = mockMediaRecorder.mock.instances[0];
-    
-    await act(async () => {
-      // Directly call the onstop handler
-      if (mediaRecorderInstance && mediaRecorderInstance.onstop) {
-        mediaRecorderInstance.onstop();
-      }
-      await waitForStateUpdate();
+  test('renders resume button when paused', () => {
+    // Update the mock to return isRecording and isPaused as true
+    mockedUseVoiceRecorder.mockReturnValue({
+      isRecording: true,
+      isPaused: true,
+      recordingTime: 5,
+      transcript: '',
+      audioURL: null,
+      startRecording: jest.fn(),
+      pauseRecording: jest.fn(),
+      stopRecording: jest.fn()
     });
     
-    // Since our mock doesn't properly set up the event handlers, we'll skip this assertion
-    // expect(mockOnTranscriptionComplete).toHaveBeenCalled();
+    render(<VoiceRecorder />);
+    
+    expect(screen.getByText('Resume')).toBeInTheDocument();
+  });
+
+  test('renders audio player when audioURL is available', () => {
+    // Update the mock to return an audioURL
+    mockedUseVoiceRecorder.mockReturnValue({
+      isRecording: false,
+      isPaused: false,
+      recordingTime: 0,
+      transcript: '',
+      audioURL: 'blob:http://localhost:3000/1234-5678',
+      startRecording: jest.fn(),
+      pauseRecording: jest.fn(),
+      stopRecording: jest.fn()
+    });
+    
+    render(<VoiceRecorder />);
+    
+    expect(screen.getByTestId('audio-player')).toBeInTheDocument();
+  });
+
+  test('renders transcript when available', () => {
+    // Update the mock to return a transcript
+    mockedUseVoiceRecorder.mockReturnValue({
+      isRecording: false,
+      isPaused: false,
+      recordingTime: 0,
+      transcript: 'This is a test transcript',
+      audioURL: null,
+      startRecording: jest.fn(),
+      pauseRecording: jest.fn(),
+      stopRecording: jest.fn()
+    });
+    
+    render(<VoiceRecorder />);
+    
+    expect(screen.getByTestId('transcript-text')).toBeInTheDocument();
+    expect(screen.getByText('This is a test transcript')).toBeInTheDocument();
   });
 }); 
