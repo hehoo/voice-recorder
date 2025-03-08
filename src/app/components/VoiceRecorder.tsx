@@ -2,6 +2,9 @@
 
 import { VoiceRecorderProps } from '../types/voice-recorder';
 import useVoiceRecorder from '../hooks/useVoiceRecorder';
+import AudioPlayer from './AudioPlayer';
+import TranscriptDisplay from './TranscriptDisplay';
+import TimeDisplay from './TimeDisplay';
 
 const VoiceRecorder = ({ onRecordComplete }: VoiceRecorderProps) => {
   const {
@@ -15,12 +18,6 @@ const VoiceRecorder = ({ onRecordComplete }: VoiceRecorderProps) => {
     stopRecording
   } = useVoiceRecorder({ onRecordComplete });
   
-  const formatTime = (seconds: number) => {
-    const minutes = Math.floor(seconds / 60);
-    const remainingSeconds = seconds % 60;
-    return `${minutes.toString().padStart(2, '0')}:${remainingSeconds.toString().padStart(2, '0')}`;
-  };
-  
   return (
     <div className="flex flex-col items-center p-6 bg-white dark:bg-gray-800 rounded-lg shadow-md w-full max-w-md">
       <h2 className="text-2xl font-bold mb-6 text-gray-800 dark:text-white">Voice Recorder</h2>
@@ -32,9 +29,7 @@ const VoiceRecorder = ({ onRecordComplete }: VoiceRecorderProps) => {
         ></div>
       </div>
       
-      <div className="text-3xl font-mono mb-6 text-gray-800 dark:text-white">
-        {formatTime(recordingTime)}
-      </div>
+      <TimeDisplay seconds={recordingTime} />
       
       <div className="flex space-x-4 mb-6">
         {!isRecording ? (
@@ -65,21 +60,9 @@ const VoiceRecorder = ({ onRecordComplete }: VoiceRecorderProps) => {
         )}
       </div>
       
-      {audioURL && (
-        <div className="w-full mb-6">
-          <h3 className="text-lg font-semibold mb-2 text-gray-800 dark:text-white">Recording</h3>
-          <audio src={audioURL} controls className="w-full" data-testid="audio-player" />
-        </div>
-      )}
+      {audioURL && <AudioPlayer audioURL={audioURL} />}
       
-      {transcript && (
-        <div className="w-full">
-          <h3 className="text-lg font-semibold mb-2 text-gray-800 dark:text-white">Transcript</h3>
-          <div className="p-3 bg-gray-100 dark:bg-gray-700 rounded-md text-gray-800 dark:text-white" data-testid="transcript-text">
-            {transcript}
-          </div>
-        </div>
-      )}
+      {transcript && <TranscriptDisplay transcript={transcript} />}
     </div>
   );
 };
