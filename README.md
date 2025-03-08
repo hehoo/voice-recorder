@@ -12,16 +12,17 @@ A web application built with React and Next.js that allows users to record their
 
 ## Technologies Used
 
-- React 19
-- Next.js 15
+- React 18
+- Next.js 14
 - TypeScript
 - Web Audio API for recording
 - SpeechRecognition API for speech-to-text conversion
 - TailwindCSS for styling
+- Jest and React Testing Library for testing
 
 ## Prerequisites
 
-- Node.js 18.0.0 or later
+- Node.js 18.17.0 or later
 - npm or yarn
 
 ## Getting Started
@@ -29,7 +30,7 @@ A web application built with React and Next.js that allows users to record their
 1. Clone the repository:
 
 ```bash
-git clone https://github.com/yourusername/voice-recorder.git
+git clone https://github.com/hehoo/voice-recorder.git
 cd voice-recorder
 ```
 
@@ -58,6 +59,16 @@ yarn dev
 3. Click the "Stop" button to stop and save the recording.
 4. The recorded audio will be available for playback, and the transcribed text will be displayed below.
 
+## Testing
+
+The application includes unit tests for the components. To run the tests:
+
+```bash
+npm test
+# or
+npm run test:watch # for watch mode
+```
+
 ## Browser Compatibility
 
 This application uses the Web Audio API and SpeechRecognition API, which are supported in most modern browsers:
@@ -73,21 +84,40 @@ Note: The SpeechRecognition API might have varying levels of support across brow
 
 ```
 voice-recorder/
+├── .github/
+│   └── workflows/
+│       └── ci.yml
 ├── public/
 ├── src/
 │   ├── app/
 │   │   ├── components/
-│   │   │   └── VoiceRecorder.tsx
+│   │   │   ├── VoiceRecorder.tsx
+│   │   │   └── VoiceRecorder.test.tsx
 │   │   ├── types/
 │   │   │   └── speech-recognition.d.ts
+│   │   │   └── voice-recorder.ts
 │   │   ├── globals.css
 │   │   ├── layout.tsx
 │   │   └── page.tsx
-│   └── ...
+├── .eslintrc.js
+├── jest.config.js
+├── jest.setup.js
+├── next.config.js
 ├── package.json
+├── postcss.config.js
+├── tailwind.config.js
 ├── tsconfig.json
+├── tsconfig.jest.json
 └── README.md
 ```
+
+## CI/CD
+
+This project uses GitHub Actions for continuous integration and deployment. The workflow is defined in `.github/workflows/ci.yml` and includes:
+
+- Linting
+- Running tests
+- Building the application
 
 ## Future Improvements
 
@@ -95,7 +125,7 @@ voice-recorder/
 - Implement language selection for speech recognition
 - Add waveform visualization during recording
 - Implement user authentication to save recordings
-- Add unit and integration tests
+- Add more comprehensive tests
 
 ## License
 
