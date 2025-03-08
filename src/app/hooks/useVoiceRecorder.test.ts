@@ -78,7 +78,9 @@ describe('useVoiceRecorder', () => {
   test('should start recording when startRecording is called', async () => {
     const { result } = renderHook(() => useVoiceRecorder());
     
+    // Fix for deprecated act signature
     await act(async () => {
+      // Call startRecording and wait for it to complete
       await result.current.startRecording();
     });
     
@@ -96,8 +98,8 @@ describe('useVoiceRecorder', () => {
       await result.current.startRecording();
     });
     
-    // Then pause it
-    act(() => {
+    // Then pause it - fix for deprecated act signature
+    await act(() => {
       result.current.pauseRecording();
     });
     
@@ -113,8 +115,8 @@ describe('useVoiceRecorder', () => {
       await result.current.startRecording();
     });
     
-    // Then stop it
-    act(() => {
+    // Then stop it - fix for deprecated act signature
+    await act(() => {
       result.current.stopRecording();
     });
     
