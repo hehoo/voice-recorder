@@ -1,4 +1,5 @@
-import { useState, useRef, useEffect } from 'react';
+import { useRef, useEffect } from 'react';
+import { useVoiceRecorderStore } from '../store/voiceRecorderStore';
 
 interface UseVoiceRecorderProps {
   onRecordComplete?: (result: { audioURL: string | null; text: string }) => void;
@@ -26,11 +27,8 @@ interface SimpleSpeechRecognition {
 }
 
 const useVoiceRecorder = ({ onRecordComplete }: UseVoiceRecorderProps = {}): UseVoiceRecorderReturn => {
-  const [isRecording, setIsRecording] = useState(false);
-  const [isPaused, setIsPaused] = useState(false);
-  const [recordingTime, setRecordingTime] = useState(0);
-  const [transcript, setTranscript] = useState('');
-  const [audioURL, setAudioURL] = useState<string | null>(null);
+  const { state, actions } = useVoiceRecorderStore();
+  const { isRecording, isPaused, recordingTime, transcript, audioURL } = state;
   
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
@@ -63,7 +61,7 @@ const useVoiceRecorder = ({ onRecordComplete }: UseVoiceRecorderProps = {}): Use
               }
             }
             
-            setTranscript(finalTranscript || interimTranscript);
+            actions.setTranscript(finalTranscript || interimTranscript);
           };
         }
       }
@@ -74,13 +72,13 @@ const useVoiceRecorder = ({ onRecordComplete }: UseVoiceRecorderProps = {}): Use
         recognitionRef.current.stop();
       }
     };
-  }, []);
+  }, [actions]);
   
   // Timer for recording duration
   useEffect(() => {
     if (isRecording && !isPaused) {
       timerRef.current = setInterval(() => {
-        setRecordingTime((prevTime) => prevTime + 1);
+        actions.incrementRecordingTime();
       }, 1000);
     } else if (timerRef.current) {
       clearInterval(timerRef.current);
@@ -91,7 +89,7 @@ const useVoiceRecorder = ({ onRecordComplete }: UseVoiceRecorderProps = {}): Use
         clearInterval(timerRef.current);
       }
     };
-  }, [isRecording, isPaused]);
+  }, [isRecording, isPaused, actions]);
   
   const startRecording = async () => {
     try {
@@ -109,16 +107,16 @@ const useVoiceRecorder = ({ onRecordComplete }: UseVoiceRecorderProps = {}): Use
       mediaRecorderRef.current.onstop = () => {
         const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/wav' });
         const audioUrl = URL.createObjectURL(audioBlob);
-        setAudioURL(audioUrl);
+        actions.setAudioURL(audioUrl);
         
         // Stop all tracks of the stream
         stream.getTracks().forEach(track => track.stop());
       };
       
       mediaRecorderRef.current.start();
-      setIsRecording(true);
-      setIsPaused(false);
-      setRecordingTime(0);
+      actions.setIsRecording(true);
+      actions.setIsPaused(false);
+      actions.setRecordingTime(0);
       
       // Start speech recognition
       if (recognitionRef.current) {
@@ -133,7 +131,7 @@ const useVoiceRecorder = ({ onRecordComplete }: UseVoiceRecorderProps = {}): Use
     if (mediaRecorderRef.current && isRecording) {
       if (!isPaused) {
         mediaRecorderRef.current.pause();
-        setIsPaused(true);
+        actions.setIsPaused(true);
         
         // Pause speech recognition
         if (recognitionRef.current) {
@@ -141,7 +139,7 @@ const useVoiceRecorder = ({ onRecordComplete }: UseVoiceRecorderProps = {}): Use
         }
       } else {
         mediaRecorderRef.current.resume();
-        setIsPaused(false);
+        actions.setIsPaused(false);
         
         // Resume speech recognition
         if (recognitionRef.current) {
@@ -154,8 +152,8 @@ const useVoiceRecorder = ({ onRecordComplete }: UseVoiceRecorderProps = {}): Use
   const stopRecording = () => {
     if (mediaRecorderRef.current && isRecording) {
       mediaRecorderRef.current.stop();
-      setIsRecording(false);
-      setIsPaused(false);
+      actions.setIsRecording(false);
+      actions.setIsPaused(false);
       
       // Stop speech recognition
       if (recognitionRef.current) {
@@ -164,20 +162,12 @@ const useVoiceRecorder = ({ onRecordComplete }: UseVoiceRecorderProps = {}): Use
     }
   };
   
-  // Update the mediaRecorder onstop handler to call onRecordComplete
+  // Call onRecordComplete when recording is stopped and audioURL is available
   useEffect(() => {
-    if (mediaRecorderRef.current) {
-      mediaRecorderRef.current.onstop = () => {
-        const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/wav' });
-        const url = URL.createObjectURL(audioBlob);
-        setAudioURL(url);
-        
-        if (onRecordComplete) {
-          onRecordComplete({ audioURL: url, text: transcript });
-        }
-      };
+    if (!isRecording && audioURL && transcript && onRecordComplete) {
+      onRecordComplete({ audioURL, text: transcript });
     }
-  }, [mediaRecorderRef, transcript, onRecordComplete]);
+  }, [isRecording, audioURL, transcript, onRecordComplete]);
   
   return {
     isRecording,
