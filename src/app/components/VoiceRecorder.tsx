@@ -3,7 +3,7 @@
 import { VoiceRecorderProps } from '../types/voice-recorder';
 import useVoiceRecorder from '../hooks/useVoiceRecorder';
 
-const VoiceRecorder = ({ onTranscriptionComplete }: VoiceRecorderProps) => {
+const VoiceRecorder = ({ onRecordComplete }: VoiceRecorderProps) => {
   const {
     isRecording,
     isPaused,
@@ -13,7 +13,7 @@ const VoiceRecorder = ({ onTranscriptionComplete }: VoiceRecorderProps) => {
     startRecording,
     pauseRecording,
     stopRecording
-  } = useVoiceRecorder({ onTranscriptionComplete });
+  } = useVoiceRecorder({ onRecordComplete });
   
   const formatTime = (seconds: number) => {
     const minutes = Math.floor(seconds / 60);

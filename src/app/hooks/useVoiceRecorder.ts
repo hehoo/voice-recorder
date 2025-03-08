@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 
 interface UseVoiceRecorderProps {
-  onTranscriptionComplete?: (text: string) => void;
+  onRecordComplete?: (result: { audioURL: string | null; text: string }) => void;
 }
 
 interface UseVoiceRecorderReturn {
@@ -25,7 +25,7 @@ interface SimpleSpeechRecognition {
   stop: () => void;
 }
 
-const useVoiceRecorder = ({ onTranscriptionComplete }: UseVoiceRecorderProps = {}): UseVoiceRecorderReturn => {
+const useVoiceRecorder = ({ onRecordComplete }: UseVoiceRecorderProps = {}): UseVoiceRecorderReturn => {
   const [isRecording, setIsRecording] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
   const [recordingTime, setRecordingTime] = useState(0);
@@ -113,10 +113,6 @@ const useVoiceRecorder = ({ onTranscriptionComplete }: UseVoiceRecorderProps = {
         
         // Stop all tracks of the stream
         stream.getTracks().forEach(track => track.stop());
-        
-        if (onTranscriptionComplete) {
-          onTranscriptionComplete(transcript);
-        }
       };
       
       mediaRecorderRef.current.start();
@@ -167,6 +163,21 @@ const useVoiceRecorder = ({ onTranscriptionComplete }: UseVoiceRecorderProps = {
       }
     }
   };
+  
+  // Update the mediaRecorder onstop handler to call onRecordComplete
+  useEffect(() => {
+    if (mediaRecorderRef.current) {
+      mediaRecorderRef.current.onstop = () => {
+        const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/wav' });
+        const url = URL.createObjectURL(audioBlob);
+        setAudioURL(url);
+        
+        if (onRecordComplete) {
+          onRecordComplete({ audioURL: url, text: transcript });
+        }
+      };
+    }
+  }, [mediaRecorderRef, transcript, onRecordComplete]);
   
   return {
     isRecording,

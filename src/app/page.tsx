@@ -3,8 +3,10 @@
 import VoiceRecorder from './components/VoiceRecorder';
 
 export default function Home() {
-  const handleTranscriptionComplete = (text: string) => {
-    console.log('Transcription completed:', text);
+  const handleRecordComplete = (result: { audioURL: string | null; text: string }) => {
+    console.log('Recording completed:', result);
+    // You can use the audioURL and text here
+    // For example, you could send them to a server, display them in the UI, etc.
   };
 
   return (
@@ -15,11 +17,11 @@ export default function Home() {
       </header>
       
       <main className="w-full max-w-md">
-        <VoiceRecorder onTranscriptionComplete={handleTranscriptionComplete} />
+        <VoiceRecorder onRecordComplete={handleRecordComplete} />
       </main>
       
       <footer className="mt-12 text-center text-sm text-gray-500 dark:text-gray-400">
-        <p>Built with Web Audio API and Web Speech API</p>
+        <p>Built with <a href="https://developer.mozilla.org/en-US/docs/Web/API/Web_Audio_API" target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline">Web Audio API</a> and <a href="https://developer.mozilla.org/en-US/docs/Web/API/Web_Speech_API" target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline">Web Speech API</a></p>
       </footer>
     </div>
   );

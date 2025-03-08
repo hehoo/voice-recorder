@@ -1,3 +1,3 @@
 export interface VoiceRecorderProps {
-  onTranscriptionComplete?: (text: string) => void;
+  onRecordComplete?: (result: { audioURL: string | null; text: string }) => void;
 } 

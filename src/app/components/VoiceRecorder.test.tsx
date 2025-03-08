@@ -105,4 +105,16 @@ describe('VoiceRecorder Component', () => {
     expect(screen.getByTestId('transcript-text')).toBeInTheDocument();
     expect(screen.getByText('This is a test transcript')).toBeInTheDocument();
   });
+
+  test('passes onRecordComplete to useVoiceRecorder', () => {
+    const mockOnRecordComplete = jest.fn();
+    render(<VoiceRecorder onRecordComplete={mockOnRecordComplete} />);
+    
+    // Verify that useVoiceRecorder was called with the correct props
+    expect(mockedUseVoiceRecorder).toHaveBeenCalledWith(
+      expect.objectContaining({
+        onRecordComplete: mockOnRecordComplete
+      })
+    );
+  });
 }); 
