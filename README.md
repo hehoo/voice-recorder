@@ -9,6 +9,7 @@ A web application built with React and Next.js that allows users to record their
 - Stop recording and save the audio
 - Convert speech to text using the Web Speech API
 - Modern and responsive user interface
+- State management with TanStack Store
 
 ## Technologies Used
 
@@ -17,6 +18,7 @@ A web application built with React and Next.js that allows users to record their
 - TypeScript
 - Web Audio API for recording
 - SpeechRecognition API for speech-to-text conversion
+- TanStack Store for state management
 - TailwindCSS for styling
 - Jest and React Testing Library for testing
 
@@ -59,9 +61,26 @@ yarn dev
 3. Click the "Stop" button to stop and save the recording.
 4. The recorded audio will be available for playback, and the transcribed text will be displayed below.
 
+## State Management
+
+The application uses TanStack Store for state management, which provides:
+
+- Centralized state management for the voice recorder
+- Predictable state updates through defined actions
+- Improved testability with independent store testing
+- Better separation of concerns between state and UI
+
+The store is implemented in `src/app/store/voiceRecorderStore.ts` and manages the following state:
+
+- `isRecording`: Whether recording is in progress
+- `isPaused`: Whether recording is paused
+- `recordingTime`: Duration of the recording in seconds
+- `transcript`: Transcribed text from the recording
+- `audioURL`: URL to the recorded audio blob
+
 ## Testing
 
-The application includes unit tests for the components. To run the tests:
+The application includes unit tests for the components and store. To run the tests:
 
 ```bash
 npm test
@@ -93,6 +112,13 @@ voice-recorder/
 │   │   ├── components/
 │   │   │   ├── VoiceRecorder.tsx
 │   │   │   └── VoiceRecorder.test.tsx
+│   │   ├── hooks/
+│   │   │   ├── useVoiceRecorder.ts
+│   │   │   └── useVoiceRecorder.test.ts
+│   │   ├── store/
+│   │   │   ├── voiceRecorderStore.ts
+│   │   │   ├── voiceRecorderStore.test.ts
+│   │   │   └── useVoiceRecorderStore.test.tsx
 │   │   ├── types/
 │   │   │   └── speech-recognition.d.ts
 │   │   │   └── voice-recorder.ts
@@ -111,6 +137,17 @@ voice-recorder/
 └── README.md
 ```
 
+## Architecture
+
+The application follows a clean architecture pattern:
+
+1. **UI Layer** (`components/`): React components that render the UI
+2. **State Management** (`store/`): TanStack Store for centralized state management
+3. **Business Logic** (`hooks/`): Custom hooks that handle the application logic
+4. **Types** (`types/`): TypeScript interfaces and type definitions
+
+This separation of concerns makes the codebase more maintainable and testable.
+
 ## CI/CD
 
 This project uses GitHub Actions for continuous integration and deployment. The workflow is defined in `.github/workflows/ci.yml` and includes:
@@ -118,14 +155,6 @@ This project uses GitHub Actions for continuous integration and deployment. The 
 - Linting
 - Running tests
 - Building the application
-
-## Future Improvements
-
-- Add ability to download recordings
-- Implement language selection for speech recognition
-- Add waveform visualization during recording
-- Implement user authentication to save recordings
-- Add more comprehensive tests
 
 ## License
 
@@ -135,4 +164,5 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 
 - [Next.js Documentation](https://nextjs.org/docs)
 - [Web Audio API Documentation](https://developer.mozilla.org/en-US/docs/Web/API/Web_Audio_API)
-- [SpeechRecognition API Documentation](https://developer.mozilla.org/en-US/docs/Web/API/SpeechRecognition)
+- [SpeechRecognition API Documentation](https://developer.mozilla.org/en-US/docs/Web/API/Web_Speech_API)
+- [TanStack Store Documentation](https://tanstack.com/store/latest)
