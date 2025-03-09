@@ -40,7 +40,8 @@ const VoiceRecorder = ({ onRecordComplete }: VoiceRecorderProps) => {
       data-testid="voice-recorder"
       aria-label="Voice Recorder"
     >
-      <h2 className="text-2xl font-bold mb-6 text-gray-800 dark:text-white">Voice Recorder</h2>
+      <h2 className="text-2xl font-bold mb-2 text-gray-800 dark:text-white">Voice Recorder</h2>
+      <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">Maximum recording time: 1 hour</p>
       
       <ProgressBar isRecording={isRecording} isPaused={isPaused} />
       

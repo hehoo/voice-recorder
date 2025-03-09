@@ -1,4 +1,4 @@
-import { useRef, useEffect } from 'react';
+import { useRef, useEffect, useCallback } from 'react';
 import { useVoiceRecorderStore } from '../store/voiceRecorderStore';
 
 interface UseVoiceRecorderProps {
@@ -38,6 +38,37 @@ const useVoiceRecorder = ({ onRecordComplete, onError }: UseVoiceRecorderProps =
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const recognitionRef = useRef<SimpleSpeechRecognition | null>(null);
   const errorRef = useRef<Error | null>(null);
+
+  // Handle errors
+  const handleError = useCallback((error: Error) => {
+    console.error('Voice recorder error:', error);
+    errorRef.current = error;
+    actions.setError(error);
+    
+    // Call onError callback if provided
+    if (onError) {
+      onError(error);
+    }
+    
+    // Stop recording if it's in progress
+    if (isRecording) {
+      try {
+        if (mediaRecorderRef.current) {
+          mediaRecorderRef.current.stop();
+        }
+        if (recognitionRef.current) {
+          recognitionRef.current.stop();
+        }
+        actions.setIsRecording(false);
+        actions.setIsPaused(false);
+      } catch (stopError) {
+        console.error('Error stopping recording after error:', stopError);
+      }
+    }
+    
+    // Throw the error to be caught by ErrorBoundary
+    throw error;
+  }, [isRecording, onError, actions]);
   
   // Initialize speech recognition
   useEffect(() => {
@@ -95,7 +126,7 @@ const useVoiceRecorder = ({ onRecordComplete, onError }: UseVoiceRecorderProps =
         }
       }
     };
-  }, [actions]);
+  }, [actions, handleError]);
   
   // Timer for recording duration
   useEffect(() => {
@@ -113,37 +144,14 @@ const useVoiceRecorder = ({ onRecordComplete, onError }: UseVoiceRecorderProps =
       }
     };
   }, [isRecording, isPaused, actions]);
-  
-  // Handle errors
-  const handleError = (error: Error) => {
-    console.error('Voice recorder error:', error);
-    errorRef.current = error;
-    actions.setError(error);
-    
-    // Call onError callback if provided
-    if (onError) {
-      onError(error);
+
+  // Check recording time and throw error if it exceeds 1 hour
+  useEffect(() => {
+    if (recordingTime >= 3600) {
+      handleError(new Error('Recording time limit of 1 hour exceeded'));
     }
-    
-    // Stop recording if it's in progress
-    if (isRecording) {
-      try {
-        if (mediaRecorderRef.current) {
-          mediaRecorderRef.current.stop();
-        }
-        if (recognitionRef.current) {
-          recognitionRef.current.stop();
-        }
-        actions.setIsRecording(false);
-        actions.setIsPaused(false);
-      } catch (stopError) {
-        console.error('Error stopping recording after error:', stopError);
-      }
-    }
-    
-    // Throw the error to be caught by ErrorBoundary
-    throw error;
-  };
+  }, [recordingTime, handleError]);
+
   
   const startRecording = async () => {
     try {
@@ -274,7 +282,7 @@ const useVoiceRecorder = ({ onRecordComplete, onError }: UseVoiceRecorderProps =
         }
       };
     }
-  }, [actions]);
+  }, [actions, handleError]);
   
   return {
     isRecording,
