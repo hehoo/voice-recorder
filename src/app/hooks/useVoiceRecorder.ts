@@ -39,6 +39,7 @@ const useVoiceRecorder = ({ onRecordComplete, onError }: UseVoiceRecorderProps =
   
   // Network status
   const isOnline = useNetworkStatus();
+  const previousOnlineStatusRef = useRef<boolean>(isOnline);
   
   // Refs to hold MediaRecorder and SpeechRecognition instances
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
@@ -122,8 +123,27 @@ const useVoiceRecorder = ({ onRecordComplete, onError }: UseVoiceRecorderProps =
           recognition.onerror = (event: Event) => {
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
             const errorEvent = event as any;
-            const error = new Error(`Speech recognition error: ${errorEvent.error}`);
-            handleError(error);
+            
+            // Handle network errors differently
+            if (errorEvent.error === 'network') {
+              console.warn('Speech recognition network error - will continue recording audio only');
+              
+              // Don't stop recording, just disable speech recognition
+              if (recognitionRef.current) {
+                try {
+                  recognitionRef.current.stop();
+                  recognitionRef.current = null; // Clear the reference
+                } catch (stopError) {
+                  // Ignore stop errors
+                  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+                  const _error = stopError;
+                }
+              }
+            } else {
+              // For other errors, use the standard error handling
+              const error = new Error(`Speech recognition error: ${errorEvent.error}`);
+              handleError(error);
+            }
           };
           
           return recognition;
@@ -148,6 +168,47 @@ const useVoiceRecorder = ({ onRecordComplete, onError }: UseVoiceRecorderProps =
       }
     };
   }, []);
+  
+  // Monitor network status changes
+  useEffect(() => {
+    // If network status changed
+    if (previousOnlineStatusRef.current !== isOnline) {
+      console.log(`Network status changed: ${isOnline ? 'online' : 'offline'}`);
+      
+      // If we went offline and we're recording
+      if (!isOnline && isRecording && !isPaused) {
+        console.log('Network went offline during recording - stopping speech recognition');
+        
+        // Stop speech recognition but continue recording audio
+        if (recognitionRef.current) {
+          try {
+            recognitionRef.current.stop();
+            recognitionRef.current = null; // Clear the reference
+          } catch (error) {
+            console.error('Error stopping speech recognition when offline:', error);
+          }
+        }
+      }
+      
+      // If we came back online and we're recording
+      if (isOnline && isRecording && !isPaused) {
+        console.log('Network came back online during recording - restarting speech recognition');
+        
+        // Restart speech recognition
+        try {
+          recognitionRef.current = createSpeechRecognition();
+          if (recognitionRef.current) {
+            recognitionRef.current.start();
+          }
+        } catch (error) {
+          console.error('Error restarting speech recognition when back online:', error);
+        }
+      }
+      
+      // Update previous status
+      previousOnlineStatusRef.current = isOnline;
+    }
+  }, [isOnline, isRecording, isPaused, createSpeechRecognition]);
   
   // Timer for recording duration
   useEffect(() => {
@@ -184,10 +245,13 @@ const useVoiceRecorder = ({ onRecordComplete, onError }: UseVoiceRecorderProps =
         throw new Error('MediaRecorder is not supported in this browser');
       }
       
-      // Check if SpeechRecognition is supported
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      if (!(window as any).SpeechRecognition && !(window as any).webkitSpeechRecognition) {
-        throw new Error('SpeechRecognition is not supported in this browser');
+      // Only check for SpeechRecognition if online
+      if (isOnline) {
+        // Check if SpeechRecognition is supported
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        if (!(window as any).SpeechRecognition && !(window as any).webkitSpeechRecognition) {
+          throw new Error('SpeechRecognition is not supported in this browser');
+        }
       }
       
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
@@ -214,14 +278,20 @@ const useVoiceRecorder = ({ onRecordComplete, onError }: UseVoiceRecorderProps =
       actions.setTranscript('');
       internalTranscriptRef.current = '';
       
-      // Create and start speech recognition
-      recognitionRef.current = createSpeechRecognition();
-      if (recognitionRef.current) {
-        try {
-          recognitionRef.current.start();
-        } catch (error) {
-          handleError(error as Error);
+      // Only start speech recognition if online
+      if (isOnline) {
+        // Create and start speech recognition
+        recognitionRef.current = createSpeechRecognition();
+        if (recognitionRef.current) {
+          try {
+            recognitionRef.current.start();
+          } catch (error) {
+            console.error('Error starting speech recognition:', error);
+            // Don't throw error here, just log it - we still want to record audio
+          }
         }
+      } else {
+        console.log('Starting recording in offline mode (audio only)');
       }
     } catch (error) {
       handleError(error as Error);
@@ -236,7 +306,7 @@ const useVoiceRecorder = ({ onRecordComplete, onError }: UseVoiceRecorderProps =
           mediaRecorderRef.current.pause();
           actions.setIsPaused(true);
           
-          // Pause speech recognition by stopping it
+          // Pause speech recognition by stopping it (only if it's running)
           if (recognitionRef.current) {
             try {
               recognitionRef.current.stop();
@@ -250,14 +320,18 @@ const useVoiceRecorder = ({ onRecordComplete, onError }: UseVoiceRecorderProps =
           actions.setIsPaused(false);
           
           // Resume speech recognition by creating a new instance and starting it
-          try {
-            // Create a fresh instance
-            recognitionRef.current = createSpeechRecognition();
-            if (recognitionRef.current) {
-              recognitionRef.current.start();
+          // Only if we're online
+          if (isOnline) {
+            try {
+              // Create a fresh instance
+              recognitionRef.current = createSpeechRecognition();
+              if (recognitionRef.current) {
+                recognitionRef.current.start();
+              }
+            } catch (error) {
+              console.error('Error restarting speech recognition:', error);
+              // Don't throw error here, just log it - we still want to record audio
             }
-          } catch (error) {
-            handleError(error as Error);
           }
         }
       }
@@ -273,7 +347,7 @@ const useVoiceRecorder = ({ onRecordComplete, onError }: UseVoiceRecorderProps =
         actions.setIsRecording(false);
         actions.setIsPaused(false);
         
-        // Stop speech recognition
+        // Stop speech recognition if it's running
         if (recognitionRef.current) {
           try {
             recognitionRef.current.stop();
@@ -300,7 +374,11 @@ const useVoiceRecorder = ({ onRecordComplete, onError }: UseVoiceRecorderProps =
           // Still update the transcript even if there's no recognition instance
           const finalTranscript = internalTranscriptRef.current.trim().replace(/\s+/g, ' ');
           if (!finalTranscript) {
-            actions.setTranscript('No speech detected. Please try again.');
+            if (!isOnline) {
+              actions.setTranscript('Recorded in offline mode. Speech-to-text conversion will be available when online.');
+            } else {
+              actions.setTranscript('No speech detected. Please try again.');
+            }
           } else {
             actions.setTranscript(finalTranscript);
           }

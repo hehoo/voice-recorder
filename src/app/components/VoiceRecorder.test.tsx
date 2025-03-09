@@ -13,7 +13,9 @@ jest.mock('../hooks/useVoiceRecorder', () => {
     audioURL: null,
     startRecording: jest.fn(),
     pauseRecording: jest.fn(),
-    stopRecording: jest.fn()
+    stopRecording: jest.fn(),
+    error: null,
+    isOnline: true
   }));
 });
 
@@ -41,7 +43,8 @@ describe('VoiceRecorder Component', () => {
       startRecording: jest.fn(),
       pauseRecording: jest.fn(),
       stopRecording: jest.fn(),
-      error: null
+      error: null,
+      isOnline: true
     });
     
     render(<VoiceRecorder />);
@@ -61,7 +64,8 @@ describe('VoiceRecorder Component', () => {
       startRecording: jest.fn(),
       pauseRecording: jest.fn(),
       stopRecording: jest.fn(),
-      error: null
+      error: null,
+      isOnline: true
     });
     
     render(<VoiceRecorder />);
@@ -82,7 +86,8 @@ describe('VoiceRecorder Component', () => {
       startRecording: jest.fn(),
       pauseRecording: jest.fn(),
       stopRecording: jest.fn(),
-      error: null
+      error: null,
+      isOnline: true
     });
     
     render(<VoiceRecorder />);
@@ -104,7 +109,8 @@ describe('VoiceRecorder Component', () => {
       startRecording: jest.fn(),
       pauseRecording: jest.fn(),
       stopRecording: jest.fn(),
-      error: null
+      error: null,
+      isOnline: true
     });
     
     render(<VoiceRecorder />);
@@ -124,7 +130,8 @@ describe('VoiceRecorder Component', () => {
       startRecording: jest.fn(),
       pauseRecording: jest.fn(),
       stopRecording: jest.fn(),
-      error: null
+      error: null,
+      isOnline: true
     });
     
     render(<VoiceRecorder />);
@@ -132,6 +139,48 @@ describe('VoiceRecorder Component', () => {
     // Check if transcript is rendered - it has data-testid="transcript-text"
     expect(screen.getByTestId('transcript-text')).toBeInTheDocument();
     expect(screen.getByText('This is a test transcript')).toBeInTheDocument();
+  });
+
+  test('renders offline notification when offline', () => {
+    // Update the mock to return isOnline as false
+    mockedUseVoiceRecorder.mockReturnValue({
+      isRecording: false,
+      isPaused: false,
+      recordingTime: 0,
+      transcript: '',
+      audioURL: null,
+      startRecording: jest.fn(),
+      pauseRecording: jest.fn(),
+      stopRecording: jest.fn(),
+      error: null,
+      isOnline: false
+    });
+    
+    render(<VoiceRecorder />);
+    
+    // Check if offline notification is rendered
+    expect(screen.getByText(/You are currently offline/)).toBeInTheDocument();
+  });
+
+  test('does not render transcript when offline', () => {
+    // Update the mock to return a transcript but isOnline as false
+    mockedUseVoiceRecorder.mockReturnValue({
+      isRecording: false,
+      isPaused: false,
+      recordingTime: 0,
+      transcript: 'This is a test transcript',
+      audioURL: null,
+      startRecording: jest.fn(),
+      pauseRecording: jest.fn(),
+      stopRecording: jest.fn(),
+      error: null,
+      isOnline: false
+    });
+    
+    render(<VoiceRecorder />);
+    
+    // Check that transcript is not rendered
+    expect(screen.queryByTestId('transcript-text')).not.toBeInTheDocument();
   });
 
   test('passes onRecordComplete to useVoiceRecorder', () => {

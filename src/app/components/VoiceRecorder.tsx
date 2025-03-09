@@ -21,7 +21,8 @@ const VoiceRecorder = ({ onRecordComplete }: VoiceRecorderProps) => {
     startRecording,
     pauseRecording,
     stopRecording,
-    error
+    error,
+    isOnline
   } = useVoiceRecorder({ 
     onRecordComplete,
     onError: (error) => {
@@ -43,6 +44,12 @@ const VoiceRecorder = ({ onRecordComplete }: VoiceRecorderProps) => {
       <h2 className="text-2xl font-bold mb-2 text-gray-800 dark:text-white">Voice Recorder</h2>
       <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">Maximum recording time: 1 hour</p>
       
+      {!isOnline && (
+        <div className="w-full mb-4 p-2 bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200 text-sm rounded-md">
+          You are currently offline. Audio recording will continue, but speech-to-text conversion is paused until you&apos;re back online.
+        </div>
+      )}
+      
       <ProgressBar isRecording={isRecording} isPaused={isPaused} />
       
       <TimeDisplay seconds={recordingTime} />
@@ -57,7 +64,7 @@ const VoiceRecorder = ({ onRecordComplete }: VoiceRecorderProps) => {
       
       {audioURL && !isRecording && <AudioPlayer audioURL={audioURL} />}
       
-      {transcript && <TranscriptDisplay transcript={transcript} />}
+      {transcript && isOnline && <TranscriptDisplay transcript={transcript} />}
     </div>
   );
 };
