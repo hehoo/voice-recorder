@@ -1,12 +1,15 @@
 'use client';
 
-import { VoiceRecorderProps } from '../types/voice-recorder';
 import useVoiceRecorder from '../hooks/useVoiceRecorder';
 import AudioPlayer from './AudioPlayer';
 import TranscriptDisplay from './TranscriptDisplay';
 import TimeDisplay from './TimeDisplay';
 import RecordingControls from './RecordingControls';
 import ProgressBar from './ProgressBar';
+
+interface VoiceRecorderProps {
+    onRecordComplete?: (result: { audioURL: string | null; text: string }) => void;
+} 
 
 const VoiceRecorder = ({ onRecordComplete }: VoiceRecorderProps) => {
   const {
@@ -17,8 +20,19 @@ const VoiceRecorder = ({ onRecordComplete }: VoiceRecorderProps) => {
     audioURL,
     startRecording,
     pauseRecording,
-    stopRecording
-  } = useVoiceRecorder({ onRecordComplete });
+    stopRecording,
+    error
+  } = useVoiceRecorder({ 
+    onRecordComplete,
+    onError: (error) => {
+      console.error('Voice recorder error in component:', error);
+    }
+  });
+  
+  // If there's an error, let the ErrorBoundary handle it
+  if (error) {
+    throw error;
+  }
   
   return (
     <div 

@@ -1,6 +1,8 @@
 'use client';
 
 import VoiceRecorder from './components/VoiceRecorder';
+import { ErrorBoundary } from 'react-error-boundary';
+import ErrorFallback from './components/ErrorFallback';
 
 export default function Home() {
   const handleRecordComplete = (result: { audioURL: string | null; text: string }) => {
@@ -17,7 +19,12 @@ export default function Home() {
       </header>
       
       <main className="w-full max-w-md">
-        <VoiceRecorder onRecordComplete={handleRecordComplete} />
+        <ErrorBoundary FallbackComponent={ErrorFallback} onReset={() => {
+          // Reset application state here if needed
+          console.log('Error boundary reset');
+        }}>
+          <VoiceRecorder onRecordComplete={handleRecordComplete} />
+        </ErrorBoundary>
       </main>
       
       <footer className="mt-12 text-center text-sm text-gray-500 dark:text-gray-400">

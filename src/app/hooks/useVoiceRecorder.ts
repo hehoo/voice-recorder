@@ -3,6 +3,7 @@ import { useVoiceRecorderStore } from '../store/voiceRecorderStore';
 
 interface UseVoiceRecorderProps {
   onRecordComplete?: (result: { audioURL: string | null; text: string }) => void;
+  onError?: (error: Error) => void;
 }
 
 interface UseVoiceRecorderReturn {
@@ -14,6 +15,7 @@ interface UseVoiceRecorderReturn {
   startRecording: () => Promise<void>;
   pauseRecording: () => void;
   stopRecording: () => void;
+  error: Error | null;
 }
 
 // Define a simplified SpeechRecognition interface for use within this hook
@@ -22,11 +24,12 @@ interface SimpleSpeechRecognition {
   interimResults: boolean;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   onresult: (event: any) => void;
+  onerror?: (event: Event) => void;
   start: () => void;
   stop: () => void;
 }
 
-const useVoiceRecorder = ({ onRecordComplete }: UseVoiceRecorderProps = {}): UseVoiceRecorderReturn => {
+const useVoiceRecorder = ({ onRecordComplete, onError }: UseVoiceRecorderProps = {}): UseVoiceRecorderReturn => {
   const { state, actions } = useVoiceRecorderStore();
   const { isRecording, isPaused, recordingTime, transcript, audioURL } = state;
   
@@ -34,42 +37,62 @@ const useVoiceRecorder = ({ onRecordComplete }: UseVoiceRecorderProps = {}): Use
   const audioChunksRef = useRef<Blob[]>([]);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const recognitionRef = useRef<SimpleSpeechRecognition | null>(null);
+  const errorRef = useRef<Error | null>(null);
   
   // Initialize speech recognition
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      // TypeScript doesn't have types for the experimental SpeechRecognition API
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-      if (SpeechRecognition) {
-        recognitionRef.current = new SpeechRecognition();
-        if (recognitionRef.current) {
-          recognitionRef.current.continuous = true;
-          recognitionRef.current.interimResults = true;
-          
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          recognitionRef.current.onresult = (event: any) => {
-            let interimTranscript = '';
-            let finalTranscript = '';
+      try {
+        // TypeScript doesn't have types for the experimental SpeechRecognition API
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+        if (SpeechRecognition) {
+          recognitionRef.current = new SpeechRecognition();
+          if (recognitionRef.current) {
+            recognitionRef.current.continuous = true;
+            recognitionRef.current.interimResults = true;
             
-            for (let i = event.resultIndex; i < event.results.length; i++) {
-              const transcript = event.results[i][0].transcript;
-              if (event.results[i].isFinal) {
-                finalTranscript += transcript + ' ';
-              } else {
-                interimTranscript += transcript;
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            recognitionRef.current.onresult = (event: any) => {
+              try {
+                let interimTranscript = '';
+                let finalTranscript = '';
+                
+                for (let i = event.resultIndex; i < event.results.length; i++) {
+                  const transcript = event.results[i][0].transcript;
+                  if (event.results[i].isFinal) {
+                    finalTranscript += transcript + ' ';
+                  } else {
+                    interimTranscript += transcript;
+                  }
+                }
+                
+                actions.setTranscript(finalTranscript || interimTranscript);
+              } catch (error) {
+                handleError(error as Error);
               }
-            }
+            };
             
-            actions.setTranscript(finalTranscript || interimTranscript);
-          };
+            // Add error handler for speech recognition
+            recognitionRef.current.onerror = (event) => {
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              const error = new Error(`Speech recognition error: ${(event as any).error}`);
+              handleError(error);
+            };
+          }
         }
+      } catch (error) {
+        handleError(error as Error);
       }
     }
     
     return () => {
       if (recognitionRef.current) {
-        recognitionRef.current.stop();
+        try {
+          recognitionRef.current.stop();
+        } catch (error) {
+          console.error('Error stopping speech recognition:', error);
+        }
       }
     };
   }, [actions]);
@@ -91,8 +114,53 @@ const useVoiceRecorder = ({ onRecordComplete }: UseVoiceRecorderProps = {}): Use
     };
   }, [isRecording, isPaused, actions]);
   
+  // Handle errors
+  const handleError = (error: Error) => {
+    console.error('Voice recorder error:', error);
+    errorRef.current = error;
+    actions.setError(error);
+    
+    // Call onError callback if provided
+    if (onError) {
+      onError(error);
+    }
+    
+    // Stop recording if it's in progress
+    if (isRecording) {
+      try {
+        if (mediaRecorderRef.current) {
+          mediaRecorderRef.current.stop();
+        }
+        if (recognitionRef.current) {
+          recognitionRef.current.stop();
+        }
+        actions.setIsRecording(false);
+        actions.setIsPaused(false);
+      } catch (stopError) {
+        console.error('Error stopping recording after error:', stopError);
+      }
+    }
+    
+    // Throw the error to be caught by ErrorBoundary
+    throw error;
+  };
+  
   const startRecording = async () => {
     try {
+      // Reset error state
+      errorRef.current = null;
+      
+      // Check if MediaRecorder is supported
+      if (!window.MediaRecorder) {
+        throw new Error('MediaRecorder is not supported in this browser');
+      }
+      
+      // Check if SpeechRecognition is supported
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      if (!(window as any).SpeechRecognition && !(window as any).webkitSpeechRecognition) {
+        throw new Error('SpeechRecognition is not supported in this browser');
+      }
+      
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       
       mediaRecorderRef.current = new MediaRecorder(stream);
@@ -104,13 +172,8 @@ const useVoiceRecorder = ({ onRecordComplete }: UseVoiceRecorderProps = {}): Use
         }
       };
       
-      mediaRecorderRef.current.onstop = () => {
-        const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/wav' });
-        const audioUrl = URL.createObjectURL(audioBlob);
-        actions.setAudioURL(audioUrl);
-        
-        // Stop all tracks of the stream
-        stream.getTracks().forEach(track => track.stop());
+      mediaRecorderRef.current.onerror = (event) => {
+        handleError(new Error(`MediaRecorder error: ${event.error}`));
       };
       
       mediaRecorderRef.current.start();
@@ -120,45 +183,69 @@ const useVoiceRecorder = ({ onRecordComplete }: UseVoiceRecorderProps = {}): Use
       
       // Start speech recognition
       if (recognitionRef.current) {
-        recognitionRef.current.start();
+        try {
+          recognitionRef.current.start();
+        } catch (error) {
+          handleError(error as Error);
+        }
       }
     } catch (error) {
-      console.error('Error starting recording:', error);
+      handleError(error as Error);
     }
   };
   
   const pauseRecording = () => {
-    if (mediaRecorderRef.current && isRecording) {
-      if (!isPaused) {
-        mediaRecorderRef.current.pause();
-        actions.setIsPaused(true);
-        
-        // Pause speech recognition
-        if (recognitionRef.current) {
-          recognitionRef.current.stop();
-        }
-      } else {
-        mediaRecorderRef.current.resume();
-        actions.setIsPaused(false);
-        
-        // Resume speech recognition
-        if (recognitionRef.current) {
-          recognitionRef.current.start();
+    try {
+      if (mediaRecorderRef.current && isRecording) {
+        if (!isPaused) {
+          mediaRecorderRef.current.pause();
+          actions.setIsPaused(true);
+          
+          // Pause speech recognition
+          if (recognitionRef.current) {
+            try {
+              recognitionRef.current.stop();
+            } catch (error) {
+              console.error('Error stopping speech recognition:', error);
+            }
+          }
+        } else {
+          mediaRecorderRef.current.resume();
+          actions.setIsPaused(false);
+          
+          // Resume speech recognition
+          if (recognitionRef.current) {
+            try {
+              recognitionRef.current.start();
+            } catch (error) {
+              handleError(error as Error);
+            }
+          }
         }
       }
+    } catch (error) {
+      handleError(error as Error);
     }
   };
   
   const stopRecording = () => {
-    if (mediaRecorderRef.current && isRecording) {
-      mediaRecorderRef.current.stop();
-      actions.setIsRecording(false);
-      actions.setIsPaused(false);
-      
-      // Stop speech recognition
-      if (recognitionRef.current) {
-        recognitionRef.current.stop();
+    try {
+      if (mediaRecorderRef.current && isRecording) {
+        mediaRecorderRef.current.stop();
+        actions.setIsRecording(false);
+        actions.setIsPaused(false);
+        
+        // Stop speech recognition
+        if (recognitionRef.current) {
+          try {
+            recognitionRef.current.stop();
+          } catch (error) {
+            console.error('Error stopping speech recognition:', error);
+          }
+        }
       }
+    } catch (error) {
+      handleError(error as Error);
     }
   };
   
@@ -169,6 +256,26 @@ const useVoiceRecorder = ({ onRecordComplete }: UseVoiceRecorderProps = {}): Use
     }
   }, [isRecording, audioURL, transcript, onRecordComplete]);
   
+  // Update the mediaRecorder onstop handler to call onRecordComplete
+  useEffect(() => {
+    if (mediaRecorderRef.current) {
+      mediaRecorderRef.current.onstop = () => {
+        try {
+          const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/wav' });
+          const url = URL.createObjectURL(audioBlob);
+          actions.setAudioURL(url);
+          
+          // Stop all tracks of the stream
+          if (mediaRecorderRef.current && mediaRecorderRef.current.stream) {
+            mediaRecorderRef.current.stream.getTracks().forEach(track => track.stop());
+          }
+        } catch (error) {
+          handleError(error as Error);
+        }
+      };
+    }
+  }, [actions]);
+  
   return {
     isRecording,
     isPaused,
@@ -177,7 +284,8 @@ const useVoiceRecorder = ({ onRecordComplete }: UseVoiceRecorderProps = {}): Use
     audioURL,
     startRecording,
     pauseRecording,
-    stopRecording
+    stopRecording,
+    error: errorRef.current
   };
 };
 

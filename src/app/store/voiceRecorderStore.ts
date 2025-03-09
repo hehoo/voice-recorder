@@ -8,6 +8,7 @@ export interface VoiceRecorderState {
   recordingTime: number;
   transcript: string;
   audioURL: string | null;
+  error: Error | null;
 }
 
 // Define the initial state
@@ -17,6 +18,7 @@ const initialState: VoiceRecorderState = {
   recordingTime: 0,
   transcript: '',
   audioURL: null,
+  error: null,
 };
 
 // Create the store
@@ -63,6 +65,13 @@ export const voiceRecorderActions = {
     voiceRecorderStore.setState((state) => ({
       ...state,
       audioURL,
+    }));
+  },
+  
+  setError: (error: Error | null) => {
+    voiceRecorderStore.setState((state) => ({
+      ...state,
+      error,
     }));
   },
   

@@ -123,4 +123,44 @@ describe('useVoiceRecorder', () => {
     expect(mockMediaRecorderInstance.stop).toHaveBeenCalled();
     expect(result.current.isRecording).toBe(false);
   });
+
+  test('should handle errors when MediaRecorder is not supported', async () => {
+    // Temporarily remove MediaRecorder from window
+    const originalMediaRecorder = window.MediaRecorder;
+    // @ts-expect-error - Intentionally removing for test
+    window.MediaRecorder = undefined;
+    
+    const onErrorMock = jest.fn();
+    const { result } = renderHook(() => useVoiceRecorder({ onError: onErrorMock }));
+    
+    // Expect startRecording to throw an error
+    await expect(async () => {
+      await act(async () => {
+        await result.current.startRecording();
+      });
+    }).rejects.toThrow('MediaRecorder is not supported');
+    
+    // Restore MediaRecorder
+    window.MediaRecorder = originalMediaRecorder;
+  });
+  
+  test('should call onError callback when an error occurs', async () => {
+    // Mock getUserMedia to reject
+    (navigator.mediaDevices.getUserMedia as jest.Mock).mockRejectedValueOnce(
+      new Error('Permission denied')
+    );
+    
+    const onErrorMock = jest.fn();
+    const { result } = renderHook(() => useVoiceRecorder({ onError: onErrorMock }));
+    
+    // Expect startRecording to throw an error
+    await expect(async () => {
+      await act(async () => {
+        await result.current.startRecording();
+      });
+    }).rejects.toThrow('Permission denied');
+    
+    // Verify onError was called
+    expect(onErrorMock).toHaveBeenCalledWith(expect.any(Error));
+  });
 }); 
