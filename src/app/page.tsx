@@ -1,11 +1,14 @@
 'use client';
 
 import { useState } from 'react';
+import dynamic from 'next/dynamic';
 import VoiceRecorder from './components/VoiceRecorder';
 import { ErrorBoundary } from 'react-error-boundary';
 import ErrorFallback from './components/ErrorFallback';
-import OfflineIndicator from './components/OfflineIndicator';
-import RecordingsList from './components/RecordingsList';
+
+// Dynamically import components that use browser APIs with no SSR
+const OfflineIndicator = dynamic(() => import('./components/OfflineIndicator'), { ssr: false });
+const RecordingsList = dynamic(() => import('./components/RecordingsList'), { ssr: false });
 
 export default function Home() {
   const [showSavedRecordings, setShowSavedRecordings] = useState(false);

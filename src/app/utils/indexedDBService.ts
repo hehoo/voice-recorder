@@ -1,3 +1,5 @@
+'use client';
+
 /**
  * IndexedDB service for storing voice recordings offline
  */
@@ -14,13 +16,16 @@ interface Recording {
   title?: string;
 }
 
+// Check if we're in a browser environment
+const isBrowser = typeof window !== 'undefined' && typeof window.indexedDB !== 'undefined';
+
 /**
  * Initialize the IndexedDB database
  */
 export const initDB = (): Promise<IDBDatabase> => {
   return new Promise((resolve, reject) => {
-    if (!('indexedDB' in window)) {
-      reject(new Error('IndexedDB is not supported in this browser'));
+    if (!isBrowser) {
+      reject(new Error('IndexedDB is not available in this environment'));
       return;
     }
 
@@ -57,6 +62,10 @@ export const initDB = (): Promise<IDBDatabase> => {
  * Save a recording to IndexedDB
  */
 export const saveRecording = async (recording: Recording): Promise<number> => {
+  if (!isBrowser) {
+    return Promise.reject(new Error('IndexedDB is not available in this environment'));
+  }
+
   const db = await initDB();
   
   return new Promise((resolve, reject) => {
@@ -83,6 +92,10 @@ export const saveRecording = async (recording: Recording): Promise<number> => {
  * Get all recordings from IndexedDB
  */
 export const getAllRecordings = async (): Promise<Recording[]> => {
+  if (!isBrowser) {
+    return Promise.resolve([]);
+  }
+
   const db = await initDB();
   
   return new Promise((resolve, reject) => {
@@ -109,6 +122,10 @@ export const getAllRecordings = async (): Promise<Recording[]> => {
  * Get a recording by ID
  */
 export const getRecordingById = async (id: number): Promise<Recording> => {
+  if (!isBrowser) {
+    return Promise.reject(new Error('IndexedDB is not available in this environment'));
+  }
+
   const db = await initDB();
   
   return new Promise((resolve, reject) => {
@@ -139,6 +156,10 @@ export const getRecordingById = async (id: number): Promise<Recording> => {
  * Delete a recording by ID
  */
 export const deleteRecording = async (id: number): Promise<void> => {
+  if (!isBrowser) {
+    return Promise.reject(new Error('IndexedDB is not available in this environment'));
+  }
+
   const db = await initDB();
   
   return new Promise((resolve, reject) => {

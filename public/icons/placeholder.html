@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Placeholder Icon Generator</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+    canvas {
+      border: 1px solid #ccc;
+      margin-bottom: 10px;
+    }
+    .instructions {
+      background-color: #f8f9fa;
+      padding: 15px;
+      border-radius: 5px;
+      margin-bottom: 20px;
+    }
+  </style>
+</head>
+<body>
+  <h1>Placeholder Icon Generator</h1>
+  
+  <div class="instructions">
+    <p>This page generates placeholder icons for your PWA. To use:</p>
+    <ol>
+      <li>Right-click on each canvas below</li>
+      <li>Select "Save Image As..."</li>
+      <li>Save with the filename shown below each canvas</li>
+    </ol>
+  </div>
+  
+  <h2>192x192 Icon</h2>
+  <canvas id="canvas192" width="192" height="192"></canvas>
+  <p>Save as: <code>icon-192x192.png</code></p>
+  
+  <h2>512x512 Icon</h2>
+  <canvas id="canvas512" width="512" height="512"></canvas>
+  <p>Save as: <code>icon-512x512.png</code></p>
+  
+  <script>
+    // Function to draw a microphone icon
+    function drawMicrophoneIcon(ctx, size) {
+      // Clear canvas
+      ctx.clearRect(0, 0, size, size);
+      
+      // Draw background
+      ctx.fillStyle = '#4f46e5';
+      ctx.beginPath();
+      ctx.arc(size/2, size/2, size/2, 0, Math.PI * 2);
+      ctx.fill();
+      
+      // Calculate microphone size (60% of canvas)
+      const micSize = size * 0.6;
+      const x = (size - micSize) / 2;
+      const y = (size - micSize) / 2;
+      
+      // Draw microphone body
+      ctx.fillStyle = 'white';
+      ctx.beginPath();
+      ctx.roundRect(x + micSize * 0.3, y, micSize * 0.4, micSize * 0.6, micSize * 0.1);
+      ctx.fill();
+      
+      // Draw microphone base
+      ctx.beginPath();
+      ctx.arc(size/2, y + micSize * 0.6, micSize * 0.2, 0, Math.PI, false);
+      ctx.fill();
+      
+      // Draw stand
+      ctx.beginPath();
+      ctx.rect(size/2 - micSize * 0.05, y + micSize * 0.6, micSize * 0.1, micSize * 0.2);
+      ctx.fill();
+      
+      // Draw base
+      ctx.beginPath();
+      ctx.roundRect(size/2 - micSize * 0.3, y + micSize * 0.8, micSize * 0.6, micSize * 0.1, micSize * 0.05);
+      ctx.fill();
+    }
+    
+    // Draw icons when page loads
+    window.onload = function() {
+      // Draw 192x192 icon
+      const canvas192 = document.getElementById('canvas192');
+      const ctx192 = canvas192.getContext('2d');
+      drawMicrophoneIcon(ctx192, 192);
+      
+      // Draw 512x512 icon
+      const canvas512 = document.getElementById('canvas512');
+      const ctx512 = canvas512.getContext('2d');
+      drawMicrophoneIcon(ctx512, 512);
+    };
+  </script>
+</body>
+</html> 

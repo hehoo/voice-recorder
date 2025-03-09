@@ -1,3 +1,5 @@
+'use client';
+
 import { useState, useEffect } from 'react';
 
 /**
@@ -5,21 +7,26 @@ import { useState, useEffect } from 'react';
  * @returns boolean indicating if the device is online
  */
 export const useNetworkStatus = (): boolean => {
-  const [isOnline, setIsOnline] = useState<boolean>(
-    typeof navigator !== 'undefined' ? navigator.onLine : true
-  );
+  // Default to true (online) for server-side rendering
+  const [isOnline, setIsOnline] = useState<boolean>(true);
 
   useEffect(() => {
-    const handleOnline = () => setIsOnline(true);
-    const handleOffline = () => setIsOnline(false);
+    // Only run on client-side
+    if (typeof window !== 'undefined') {
+      // Set initial state based on navigator.onLine
+      setIsOnline(navigator.onLine);
+      
+      const handleOnline = () => setIsOnline(true);
+      const handleOffline = () => setIsOnline(false);
 
-    window.addEventListener('online', handleOnline);
-    window.addEventListener('offline', handleOffline);
+      window.addEventListener('online', handleOnline);
+      window.addEventListener('offline', handleOffline);
 
-    return () => {
-      window.removeEventListener('online', handleOnline);
-      window.removeEventListener('offline', handleOffline);
-    };
+      return () => {
+        window.removeEventListener('online', handleOnline);
+        window.removeEventListener('offline', handleOffline);
+      };
+    }
   }, []);
 
   return isOnline;

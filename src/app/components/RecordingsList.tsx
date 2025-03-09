@@ -1,3 +1,5 @@
+'use client';
+
 import React, { useEffect, useState } from 'react';
 import indexedDBService from '../utils/indexedDBService';
 
@@ -13,8 +15,12 @@ const RecordingsList: React.FC = () => {
   const [recordings, setRecordings] = useState<Recording[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
+    // Mark component as mounted
+    setMounted(true);
+    
     const loadRecordings = async () => {
       try {
         setLoading(true);
@@ -29,8 +35,16 @@ const RecordingsList: React.FC = () => {
       }
     };
 
-    loadRecordings();
+    // Only run on client-side
+    if (typeof window !== 'undefined') {
+      loadRecordings();
+    }
   }, []);
+
+  // Don't render anything on the server
+  if (!mounted) {
+    return null;
+  }
 
   const handleDelete = async (id: number | undefined) => {
     if (id === undefined) return;
