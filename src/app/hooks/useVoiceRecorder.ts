@@ -1,5 +1,7 @@
 import { useRef, useEffect, useCallback } from 'react';
 import { useVoiceRecorderStore } from '../store/voiceRecorderStore';
+import useNetworkStatus from './useNetworkStatus';
+import indexedDBService from '../utils/indexedDBService';
 
 interface UseVoiceRecorderProps {
   onRecordComplete?: (result: { audioURL: string | null; text: string }) => void;
@@ -16,6 +18,7 @@ interface UseVoiceRecorderReturn {
   pauseRecording: () => void;
   stopRecording: () => void;
   error: Error | null;
+  isOnline: boolean;
 }
 
 // Define a simplified SpeechRecognition interface for use within this hook
@@ -32,12 +35,16 @@ interface SimpleSpeechRecognition {
 
 const useVoiceRecorder = ({ onRecordComplete, onError }: UseVoiceRecorderProps = {}): UseVoiceRecorderReturn => {
   const { state, actions } = useVoiceRecorderStore();
-  const { isRecording, isPaused, recordingTime, transcript, audioURL } = state;
+  const { isRecording, isPaused, recordingTime, transcript, audioURL, error } = state;
   
+  // Network status
+  const isOnline = useNetworkStatus();
+  
+  // Refs to hold MediaRecorder and SpeechRecognition instances
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const recognitionRef = useRef<SimpleSpeechRecognition | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
-  const recognitionRef = useRef<SimpleSpeechRecognition | null>(null);
   const errorRef = useRef<Error | null>(null);
   
   // Store the transcript in a ref to accumulate during recording without showing it
@@ -210,7 +217,11 @@ const useVoiceRecorder = ({ onRecordComplete, onError }: UseVoiceRecorderProps =
       // Create and start speech recognition
       recognitionRef.current = createSpeechRecognition();
       if (recognitionRef.current) {
-        recognitionRef.current.start();
+        try {
+          recognitionRef.current.start();
+        } catch (error) {
+          handleError(error as Error);
+        }
       }
     } catch (error) {
       handleError(error as Error);
@@ -227,7 +238,11 @@ const useVoiceRecorder = ({ onRecordComplete, onError }: UseVoiceRecorderProps =
           
           // Pause speech recognition by stopping it
           if (recognitionRef.current) {
-            recognitionRef.current.stop();
+            try {
+              recognitionRef.current.stop();
+            } catch (error) {
+              console.error('Error stopping speech recognition:', error);
+            }
           }
         } else {
           // Resume recording
@@ -235,10 +250,14 @@ const useVoiceRecorder = ({ onRecordComplete, onError }: UseVoiceRecorderProps =
           actions.setIsPaused(false);
           
           // Resume speech recognition by creating a new instance and starting it
-          // Create a fresh instance
-          recognitionRef.current = createSpeechRecognition();
-          if (recognitionRef.current) {
-            recognitionRef.current.start();
+          try {
+            // Create a fresh instance
+            recognitionRef.current = createSpeechRecognition();
+            if (recognitionRef.current) {
+              recognitionRef.current.start();
+            }
+          } catch (error) {
+            handleError(error as Error);
           }
         }
       }
@@ -256,23 +275,27 @@ const useVoiceRecorder = ({ onRecordComplete, onError }: UseVoiceRecorderProps =
         
         // Stop speech recognition
         if (recognitionRef.current) {
-          recognitionRef.current.stop();
-          
-          // Now that recording has stopped, update the transcript in the UI
-          // Trim and clean up the transcript (remove extra spaces)
-          const finalTranscript = internalTranscriptRef.current
-            .trim()
-            .replace(/\s+/g, ' '); // Replace multiple spaces with a single space
-          
-          // If we didn't get any recognition results, provide a fallback message
-          if (!finalTranscript) {
-            actions.setTranscript('No speech detected. Please try again.');
-          } else {
-            actions.setTranscript(finalTranscript);
+          try {
+            recognitionRef.current.stop();
+            
+            // Now that recording has stopped, update the transcript in the UI
+            // Trim and clean up the transcript (remove extra spaces)
+            const finalTranscript = internalTranscriptRef.current
+              .trim()
+              .replace(/\s+/g, ' '); // Replace multiple spaces with a single space
+            
+            // If we didn't get any recognition results, provide a fallback message
+            if (!finalTranscript) {
+              actions.setTranscript('No speech detected. Please try again.');
+            } else {
+              actions.setTranscript(finalTranscript);
+            }
+            
+            // Explicitly set recognitionRef.current to null to prevent any further updates
+            recognitionRef.current = null;
+          } catch (error) {
+            console.error('Error stopping speech recognition:', error);
           }
-          
-          // Explicitly set recognitionRef.current to null to prevent any further updates
-          recognitionRef.current = null;
         } else {
           // Still update the transcript even if there's no recognition instance
           const finalTranscript = internalTranscriptRef.current.trim().replace(/\s+/g, ' ');
@@ -304,6 +327,20 @@ const useVoiceRecorder = ({ onRecordComplete, onError }: UseVoiceRecorderProps =
           const url = URL.createObjectURL(audioBlob);
           actions.setAudioURL(url);
           
+          // Save recording to IndexedDB if offline
+          if (!isOnline) {
+            try {
+              indexedDBService.saveRecording({
+                timestamp: Date.now(),
+                audioBlob,
+                transcript: internalTranscriptRef.current.trim().replace(/\s+/g, ' '),
+                title: `Recording ${new Date().toLocaleString()}`
+              });
+            } catch (error) {
+              console.error('Error saving recording to IndexedDB:', error);
+            }
+          }
+          
           // Stop all tracks of the stream
           if (mediaRecorderRef.current && mediaRecorderRef.current.stream) {
             try {
@@ -317,7 +354,7 @@ const useVoiceRecorder = ({ onRecordComplete, onError }: UseVoiceRecorderProps =
         }
       };
     }
-  }, [actions, handleError]);
+  }, [actions, handleError, isOnline]);
   
   return {
     isRecording,
@@ -328,7 +365,8 @@ const useVoiceRecorder = ({ onRecordComplete, onError }: UseVoiceRecorderProps =
     startRecording,
     pauseRecording,
     stopRecording,
-    error: errorRef.current
+    error: error || errorRef.current,
+    isOnline
   };
 };
 
