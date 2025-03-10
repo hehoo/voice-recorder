@@ -221,6 +221,9 @@ This project uses GitHub Actions for continuous integration and deployment. The 
 - Running tests
 - Building the application
 
+## TODO
+The offline support is onging on feat/offline-support-v2 feature branch. 
+
 ## License
 
 This project is licensed under the MIT License - see the LICENSE file for details.
