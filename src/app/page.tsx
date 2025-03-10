@@ -19,9 +19,10 @@ export default function Home() {
       </header>
       
       <main className="w-full max-w-md">
-        <ErrorBoundary FallbackComponent={ErrorFallback} onReset={() => {
-          // Reset application state here if needed
-          console.log('Error boundary reset');
+        <ErrorBoundary FallbackComponent={ErrorFallback} onReset={(error) => {
+          // Log the error and refresh the page
+          console.error('Error caught by boundary:', error);
+          window.location.reload();
         }}>
           <VoiceRecorder onRecordComplete={handleRecordComplete} />
         </ErrorBoundary>
