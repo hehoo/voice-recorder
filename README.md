@@ -6,7 +6,14 @@ A web application built with React and Next.js that allows users to record their
 
 Watch a demonstration of the Voice Recorder app in action:
 
-[![Voice Recorder Demo](https://cdn.loom.com/sessions/thumbnails/82141ba9f7cf4894b67a96f80e1c033c-with-play.gif)](https://www.loom.com/share/82141ba9f7cf4894b67a96f80e1c033c?sid=d578c7d6-e9a4-48b9-963c-177ab1cd4ef3)
+<div>
+    <a href="https://www.loom.com/share/82141ba9f7cf4894b67a96f80e1c033c">
+      <p>Voice Recording App Demo 🎤 - Watch Video</p>
+    </a>
+    <a href="https://www.loom.com/share/82141ba9f7cf4894b67a96f80e1c033c">
+      <img style="max-width:300px;" src="https://cdn.loom.com/sessions/thumbnails/82141ba9f7cf4894b67a96f80e1c033c-af0b63ca24c245c4-full-play.gif">
+    </a>
+</div>
 
 ## Features
 
