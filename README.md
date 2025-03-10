@@ -10,6 +10,8 @@ A web application built with React and Next.js that allows users to record their
 - Convert speech to text using the Web Speech API
 - Modern and responsive user interface
 - State management with TanStack Store
+- Robust error handling with React Error Boundary
+- Component-based architecture with clear separation of concerns
 
 ## Technologies Used
 
@@ -19,6 +21,7 @@ A web application built with React and Next.js that allows users to record their
 - Web Audio API for recording
 - SpeechRecognition API for speech-to-text conversion
 - TanStack Store for state management
+- React Error Boundary for error handling
 - TailwindCSS for styling
 - Jest and React Testing Library for testing
 
@@ -77,10 +80,33 @@ The store is implemented in `src/app/store/voiceRecorderStore.ts` and manages th
 - `recordingTime`: Duration of the recording in seconds
 - `transcript`: Transcribed text from the recording
 - `audioURL`: URL to the recorded audio blob
+- `error`: Any error that occurred during recording
+
+## Component Architecture
+
+The application uses a component-based architecture for better separation of concerns:
+
+- `VoiceRecorder`: Main component that orchestrates the recording process
+- `RecordingControls`: Handles the UI for recording controls (record, pause, stop)
+- `ProgressBar`: Displays the recording progress
+- `TimeDisplay`: Shows the recording time
+- `TranscriptDisplay`: Displays the transcribed text
+- `AudioPlayer`: Plays back the recorded audio
+
+This separation makes the code more maintainable, testable, and allows for easier extension of functionality.
+
+## Error Handling
+
+The application uses React Error Boundary for robust error handling:
+
+- Gracefully catches and displays errors during recording
+- Provides a user-friendly fallback UI when errors occur
+- Allows users to retry after an error
+- Logs errors to the console for debugging
 
 ## Testing
 
-The application includes unit tests for the components and store. To run the tests:
+The application includes unit tests for the components, hooks, and store. To run the tests:
 
 ```bash
 npm test
@@ -110,8 +136,14 @@ voice-recorder/
 ├── src/
 │   ├── app/
 │   │   ├── components/
+│   │   │   ├── AudioPlayer.tsx
+│   │   │   ├── ErrorFallback.tsx
+│   │   │   ├── ProgressBar.tsx
+│   │   │   ├── RecordingControls.tsx
+│   │   │   ├── TimeDisplay.tsx
+│   │   │   ├── TranscriptDisplay.tsx
 │   │   │   ├── VoiceRecorder.tsx
-│   │   │   └── VoiceRecorder.test.tsx
+│   │   │   └── [Component].test.tsx files
 │   │   ├── hooks/
 │   │   │   ├── useVoiceRecorder.ts
 │   │   │   └── useVoiceRecorder.test.ts
@@ -122,6 +154,9 @@ voice-recorder/
 │   │   ├── types/
 │   │   │   └── speech-recognition.d.ts
 │   │   │   └── voice-recorder.ts
+│   │   ├── utils/
+│   │   │   ├── timeUtils.ts
+│   │   │   └── timeUtils.test.ts
 │   │   ├── globals.css
 │   │   ├── layout.tsx
 │   │   └── page.tsx
@@ -142,11 +177,28 @@ voice-recorder/
 The application follows a clean architecture pattern:
 
 1. **UI Layer** (`components/`): React components that render the UI
-2. **State Management** (`store/`): TanStack Store for centralized state management
-3. **Business Logic** (`hooks/`): Custom hooks that handle the application logic
-4. **Types** (`types/`): TypeScript interfaces and type definitions
+   - Decomposed into smaller, focused components for better maintainability
+   - Enhanced with accessibility features
 
-This separation of concerns makes the codebase more maintainable and testable.
+2. **State Management** (`store/`): TanStack Store for centralized state management
+   - Manages application state
+   - Provides actions for state updates
+
+3. **Business Logic** (`hooks/`): Custom hooks that handle the application logic
+   - Encapsulates the recording and speech recognition logic
+   - Provides a clean API for components
+
+4. **Error Handling** (`components/ErrorFallback.tsx`): React Error Boundary for error handling
+   - Catches and displays errors
+   - Provides recovery mechanisms
+
+5. **Types** (`types/`): TypeScript interfaces and type definitions
+   - Ensures type safety throughout the application
+
+6. **Utils** (`utils/`): Utility functions
+   - Reusable helper functions
+
+This separation of concerns makes the codebase more maintainable, testable, and extensible.
 
 ## CI/CD
 
@@ -166,3 +218,4 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 - [Web Audio API Documentation](https://developer.mozilla.org/en-US/docs/Web/API/Web_Audio_API)
 - [SpeechRecognition API Documentation](https://developer.mozilla.org/en-US/docs/Web/API/Web_Speech_API)
 - [TanStack Store Documentation](https://tanstack.com/store/latest)
+- [React Error Boundary Documentation](https://github.com/bvaughn/react-error-boundary)
