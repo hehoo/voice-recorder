@@ -57,7 +57,9 @@ const VoiceRecorder = ({ onRecordComplete }: VoiceRecorderProps) => {
       
       {audioURL && !isRecording && <AudioPlayer audioURL={audioURL} />}
       
-      {transcript && <TranscriptDisplay transcript={transcript} />}
+      {(isRecording || transcript) && (
+        <TranscriptDisplay transcript={transcript || 'Listening...'} />
+      )}
     </div>
   );
 };

@@ -13,7 +13,8 @@ jest.mock('../hooks/useVoiceRecorder', () => {
     audioURL: null,
     startRecording: jest.fn(),
     pauseRecording: jest.fn(),
-    stopRecording: jest.fn()
+    stopRecording: jest.fn(),
+    error: null
   }));
 });
 
@@ -28,6 +29,7 @@ describe('VoiceRecorder Component', () => {
     expect(screen.getByTestId('record-button')).toBeInTheDocument();
     expect(screen.queryByTestId('pause-button')).not.toBeInTheDocument();
     expect(screen.queryByTestId('stop-button')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('transcript-text')).not.toBeInTheDocument();
   });
 
   test('renders record button when not recording', () => {
@@ -71,6 +73,28 @@ describe('VoiceRecorder Component', () => {
     expect(screen.getByTestId('stop-button')).toBeInTheDocument();
   });
 
+  test('renders transcript display with "Listening..." when recording starts', () => {
+    // Update the mock to return isRecording as true but no transcript yet
+    mockedUseVoiceRecorder.mockReturnValue({
+      isRecording: true,
+      isPaused: false,
+      recordingTime: 5,
+      transcript: '',
+      audioURL: null,
+      startRecording: jest.fn(),
+      pauseRecording: jest.fn(),
+      stopRecording: jest.fn(),
+      error: null
+    });
+    
+    render(<VoiceRecorder />);
+    
+    // Check if transcript display is rendered with "Listening..." text
+    const transcriptElement = screen.getByTestId('transcript-text');
+    expect(transcriptElement).toBeInTheDocument();
+    expect(transcriptElement).toHaveTextContent('Listening...');
+  });
+
   test('renders resume button when paused', () => {
     // Update the mock to return isRecording and isPaused as true
     mockedUseVoiceRecorder.mockReturnValue({
@@ -93,7 +117,7 @@ describe('VoiceRecorder Component', () => {
     expect(pauseButton).toHaveTextContent('Resume');
   });
 
-  test('renders audio player when audioURL is available', () => {
+  test('renders audio player when audioURL is available and not recording', () => {
     // Update the mock to return an audioURL
     mockedUseVoiceRecorder.mockReturnValue({
       isRecording: false,
@@ -111,6 +135,26 @@ describe('VoiceRecorder Component', () => {
     
     // Check if audio player is rendered
     expect(screen.getByTestId('audio-player')).toBeInTheDocument();
+  });
+
+  test('does not render audio player when audioURL is available but still recording', () => {
+    // Update the mock to return an audioURL but still recording
+    mockedUseVoiceRecorder.mockReturnValue({
+      isRecording: true,
+      isPaused: false,
+      recordingTime: 10,
+      transcript: '',
+      audioURL: 'blob:http://localhost:3000/1234-5678',
+      startRecording: jest.fn(),
+      pauseRecording: jest.fn(),
+      stopRecording: jest.fn(),
+      error: null
+    });
+    
+    render(<VoiceRecorder />);
+    
+    // Check that audio player is not rendered
+    expect(screen.queryByTestId('audio-player')).not.toBeInTheDocument();
   });
 
   test('renders transcript when available', () => {
